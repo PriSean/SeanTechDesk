@@ -5,10 +5,9 @@ services:
     plan: free
     buildCommand: |
       set -e
-      echo "== STRIP BOMs (server/client/schema) =="
-      perl -i -pe 's/^\x{FEFF}//' server/package.json || true
-      perl -i -pe 's/^\x{FEFF}//' client/package.json || true
-      perl -i -pe 's/^\x{FEFF}//' server/prisma/schema.prisma || true
+
+      echo "== STRIP BOMs with Node =="
+      node -e "const fs=require('fs');const files=['server/package.json','client/package.json','server/prisma/schema.prisma'];files.forEach(f=>{if(fs.existsSync(f)){let s=fs.readFileSync(f,'utf8');if(s.charCodeAt(0)===0xFEFF){s=s.slice(1);}fs.writeFileSync(f,s)}})"
 
       echo "== INSTALL + BUILD CLIENT =="
       npm install --prefix client
@@ -16,6 +15,9 @@ services:
 
       echo "== INSTALL SERVER =="
       npm install --prefix server
+
+      echo '== SHOW server/package.json first 40 chars (sanity) =='
+      node -e "process.stdout.write(require('fs').readFileSync('server/package.json','utf8').slice(0,40))"
 
       echo "== PRISMA GENERATE + DEPLOY =="
       cd server && npx prisma generate
