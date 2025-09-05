@@ -4,9 +4,21 @@ services:
     env: node
     plan: free
     buildCommand: |
-      (npm ci --prefix client) || (npm install --prefix client)
+      set -e
+      echo "== STRIP BOMs (server/client/schema) =="
+      perl -i -pe 's/^\x{FEFF}//' server/package.json || true
+      perl -i -pe 's/^\x{FEFF}//' client/package.json || true
+      perl -i -pe 's/^\x{FEFF}//' server/prisma/schema.prisma || true
+
+      echo "== INSTALL + BUILD CLIENT =="
+      npm install --prefix client
       npm run build --prefix client
-      (npm ci --prefix server) || (npm install --prefix server)
+
+      echo "== INSTALL SERVER =="
+      npm install --prefix server
+
+      echo "== PRISMA GENERATE + DEPLOY =="
+      cd server && npx prisma generate
       cd server && npx prisma migrate deploy
     startCommand: node server/server.js
     autoDeploy: true
